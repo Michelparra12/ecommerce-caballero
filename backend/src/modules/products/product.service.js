@@ -1,6 +1,27 @@
-import { findProducts, findProductBySlug } from './product.repository.js';
+import {
+  findProducts,
+  findProductBySlug,
+  findProductByIdAny,
+  insertProduct,
+  updateProduct as updateProductInRepo,
+  setProductStock,
+  softDeleteProduct,
+} from './product.repository.js';
 import { buildPaginatedResponse } from '../../shared/pagination.js';
 import { ApiError } from '../../shared/ApiError.js';
+
+// Postgres error 23505 = unique_violation (sku o slug repetidos). Se
+// traduce a un 400 legible en vez de dejar escapar el error crudo de pg
+// como un 500 genérico.
+function rethrowAsApiError(err) {
+  if (err.code === '23505') {
+    throw ApiError.badRequest('Ya existe un producto con ese SKU o slug');
+  }
+  if (err.code === '23503') {
+    throw ApiError.badRequest('La categoría indicada no existe');
+  }
+  throw err;
+}
 
 /**
  * Lógica de negocio de catálogo. Traduce filtros ya validados en
@@ -33,4 +54,44 @@ export async function getProductBySlug(slug) {
   }
 
   return product;
+}
+
+// --- Operaciones de administración ---
+
+async function getProductOrThrow(id) {
+  const product = await findProductByIdAny(id);
+
+  if (!product) {
+    throw ApiError.notFound(`Producto ${id} no encontrado`);
+  }
+
+  return product;
+}
+
+export async function createProduct(data) {
+  try {
+    return await insertProduct(data);
+  } catch (err) {
+    rethrowAsApiError(err);
+  }
+}
+
+export async function updateProduct(id, data) {
+  await getProductOrThrow(id);
+
+  try {
+    return await updateProductInRepo(id, data);
+  } catch (err) {
+    rethrowAsApiError(err);
+  }
+}
+
+export async function updateStock(id, stock) {
+  await getProductOrThrow(id);
+  return setProductStock(id, stock);
+}
+
+export async function deactivateProduct(id) {
+  await getProductOrThrow(id);
+  return softDeleteProduct(id);
 }

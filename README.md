@@ -85,6 +85,23 @@ Importa `n8n/workflows/notificaciones-whatsapp.json` desde la UI de n8n.
 | POST | `/api/pagos/webhook/wompi` | Webhook de confirmación de pago (firma verificada) |
 | GET | `/feed/productos.xml` | Feed XML para Instagram Shopping / Facebook Shop |
 
+### Panel de administración (requieren rol `admin` en la tabla `usuarios`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/productos` | Crear producto |
+| PATCH | `/api/productos/:id` | Editar producto (parcial) |
+| PATCH | `/api/productos/:id/stock` | Ajustar stock |
+| DELETE | `/api/productos/:id` | Dar de baja (soft delete) |
+| POST | `/api/categorias` | Crear categoría |
+| PATCH | `/api/categorias/:id` | Editar categoría |
+| GET | `/api/ordenes/admin` | Listar todas las órdenes (filtro `estado`, paginado) |
+| GET | `/api/ordenes/admin/:id` | Ver cualquier orden |
+| PATCH | `/api/ordenes/admin/:id/envio` | Cambiar estado logístico / registrar guía de envío (dispara `guia.enviada` a n8n la primera vez que se registra la guía) |
+
+Para dar el primer usuario admin: `UPDATE usuarios SET rol = 'admin' WHERE email = 'tu@email.com';`
+No hay endpoint HTTP para esto — es deliberado, evita que alguien se autopromueva a admin vía API.
+
 ## Despliegue a producción
 
 Ver [`DEPLOYMENT.md`](./DEPLOYMENT.md) para la guía completa de despliegue en

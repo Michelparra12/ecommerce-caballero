@@ -135,3 +135,60 @@ export async function updateOrderPaymentStatus({ orderId, estado, referenciaPasa
   );
   return result.rows[0] ?? null;
 }
+
+// --- Panel de administración ---
+
+/**
+ * Lista TODAS las órdenes (de cualquier usuario), con filtro opcional
+ * por estado y paginación. A diferencia de findOrdersByUsuario, esta
+ * función es exclusiva de rutas protegidas con requireRole('admin').
+ */
+export async function findAllOrders({ estado, limit, offset }) {
+  const conditions = [];
+  const params = [];
+
+  if (estado) {
+    params.push(estado);
+    conditions.push(`o.estado = $${params.length}`);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const dataParams = [...params, limit, offset];
+  const dataQuery = `
+    SELECT o.*, u.nombre_completo AS cliente_nombre, u.email AS cliente_email
+    FROM ordenes o
+    JOIN usuarios u ON u.id = o.usuario_id
+    ${whereClause}
+    ORDER BY o.creado_en DESC
+    LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}
+  `;
+
+  const countQuery = `SELECT COUNT(*)::int AS total FROM ordenes o ${whereClause}`;
+
+  const [dataResult, countResult] = await Promise.all([
+    query(dataQuery, dataParams),
+    query(countQuery, params),
+  ]);
+
+  return { items: dataResult.rows, totalItems: countResult.rows[0].total };
+}
+
+/**
+ * Actualiza el estado logístico de una orden y, opcionalmente, los datos
+ * de envío. Separado de updateOrderPaymentStatus porque este lo usa el
+ * admin (despacho/entrega), no el webhook de la pasarela de pago.
+ */
+export async function updateOrderFulfillment({ orderId, estado, guiaEnvio, transportadora, urlSeguimiento }) {
+  const result = await query(
+    `UPDATE ordenes
+     SET estado = COALESCE($1, estado),
+         guia_envio = COALESCE($2, guia_envio),
+         transportadora = COALESCE($3, transportadora),
+         url_seguimiento = COALESCE($4, url_seguimiento)
+     WHERE id = $5
+     RETURNING *`,
+    [estado ?? null, guiaEnvio ?? null, transportadora ?? null, urlSeguimiento ?? null, orderId]
+  );
+  return result.rows[0] ?? null;
+}

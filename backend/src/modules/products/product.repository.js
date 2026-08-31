@@ -96,3 +96,102 @@ export async function findProductBySlug(slug) {
 
   return result.rows[0] ?? null;
 }
+
+// A partir de aquí: operaciones de escritura, exclusivas del panel de
+// administración (protegidas con requireRole('admin') en las rutas).
+
+export async function findProductByIdAny(id) {
+  // A diferencia de findProductBySlug, un admin necesita poder ver/editar
+  // también productos inactivos (dados de baja), por eso no filtra por activo.
+  const result = await query('SELECT * FROM productos WHERE id = $1', [id]);
+  return result.rows[0] ?? null;
+}
+
+export async function insertProduct(data) {
+  const result = await query(
+    `INSERT INTO productos
+       (categoria_id, sku, nombre, slug, descripcion_corta, descripcion, marca,
+        precio, precio_comparacion, stock, peso_gramos, imagen_principal_url,
+        destacado, meta_title, meta_description)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+     RETURNING *`,
+    [
+      data.categoriaId,
+      data.sku,
+      data.nombre,
+      data.slug,
+      data.descripcionCorta ?? null,
+      data.descripcion ?? null,
+      data.marca ?? null,
+      data.precio,
+      data.precioComparacion ?? null,
+      data.stock ?? 0,
+      data.pesoGramos ?? null,
+      data.imagenPrincipalUrl ?? null,
+      data.destacado ?? false,
+      data.metaTitle ?? null,
+      data.metaDescription ?? null,
+    ]
+  );
+
+  return result.rows[0];
+}
+
+// Mapa de campos permitidos en el body -> columna real en BD. Sirve de
+// allowlist: cualquier clave que no esté aquí se ignora, así el body
+// del request nunca puede escribir una columna arbitraria (ej. "id").
+const UPDATABLE_FIELDS = {
+  categoriaId: 'categoria_id',
+  nombre: 'nombre',
+  slug: 'slug',
+  descripcionCorta: 'descripcion_corta',
+  descripcion: 'descripcion',
+  marca: 'marca',
+  precio: 'precio',
+  precioComparacion: 'precio_comparacion',
+  pesoGramos: 'peso_gramos',
+  imagenPrincipalUrl: 'imagen_principal_url',
+  destacado: 'destacado',
+  metaTitle: 'meta_title',
+  metaDescription: 'meta_description',
+};
+
+export async function updateProduct(id, data) {
+  const columns = [];
+  const values = [];
+
+  for (const [key, column] of Object.entries(UPDATABLE_FIELDS)) {
+    if (data[key] === undefined) continue;
+    values.push(data[key]);
+    columns.push(`${column} = $${values.length}`);
+  }
+
+  if (columns.length === 0) {
+    return findProductByIdAny(id);
+  }
+
+  values.push(id);
+
+  const result = await query(
+    `UPDATE productos SET ${columns.join(', ')} WHERE id = $${values.length} RETURNING *`,
+    values
+  );
+
+  return result.rows[0] ?? null;
+}
+
+export async function setProductStock(id, stock) {
+  const result = await query(
+    'UPDATE productos SET stock = $1 WHERE id = $2 RETURNING *',
+    [stock, id]
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function softDeleteProduct(id) {
+  const result = await query(
+    'UPDATE productos SET activo = FALSE WHERE id = $1 RETURNING *',
+    [id]
+  );
+  return result.rows[0] ?? null;
+}

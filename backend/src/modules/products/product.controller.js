@@ -1,5 +1,17 @@
-import { listProductsQuerySchema } from './product.validators.js';
-import { listProducts, getProductBySlug } from './product.service.js';
+import {
+  listProductsQuerySchema,
+  createProductSchema,
+  updateProductSchema,
+  updateStockSchema,
+} from './product.validators.js';
+import {
+  listProducts,
+  getProductBySlug,
+  createProduct,
+  updateProduct,
+  updateStock,
+  deactivateProduct,
+} from './product.service.js';
 import { ApiError } from '../../shared/ApiError.js';
 
 /**
@@ -35,4 +47,48 @@ export async function getProductBySlugHandler(req, res) {
   const product = await getProductBySlug(slug);
 
   res.status(200).json({ data: product });
+}
+
+// --- Handlers de administración (montados detrás de requireRole('admin')) ---
+
+export async function createProductHandler(req, res) {
+  const parseResult = createProductSchema.safeParse(req.body);
+
+  if (!parseResult.success) {
+    throw ApiError.badRequest('Datos de producto inválidos', parseResult.error.flatten());
+  }
+
+  const producto = await createProduct(parseResult.data);
+
+  res.status(201).json({ data: producto });
+}
+
+export async function updateProductHandler(req, res) {
+  const parseResult = updateProductSchema.safeParse(req.body);
+
+  if (!parseResult.success) {
+    throw ApiError.badRequest('Datos de producto inválidos', parseResult.error.flatten());
+  }
+
+  const producto = await updateProduct(Number(req.params.id), parseResult.data);
+
+  res.status(200).json({ data: producto });
+}
+
+export async function updateStockHandler(req, res) {
+  const parseResult = updateStockSchema.safeParse(req.body);
+
+  if (!parseResult.success) {
+    throw ApiError.badRequest('Stock inválido', parseResult.error.flatten());
+  }
+
+  const producto = await updateStock(Number(req.params.id), parseResult.data.stock);
+
+  res.status(200).json({ data: producto });
+}
+
+export async function deactivateProductHandler(req, res) {
+  const producto = await deactivateProduct(Number(req.params.id));
+
+  res.status(200).json({ data: producto });
 }
