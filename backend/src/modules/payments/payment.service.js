@@ -1,7 +1,8 @@
-import { createTransaction, verifyWebhookSignature } from '../../integrations/payments/wompi.client.js';
+import { createTransaction, verifyWebhookSignature, buildPaymentMethod } from '../../integrations/payments/wompi.client.js';
 import { triggerOrderConfirmation } from '../../integrations/n8n/n8n.client.js';
 import { findOrderById, findOrderIdByNumero, updateOrderPaymentStatus } from '../orders/order.repository.js';
 import { findUsuarioById } from '../users/user.repository.js';
+import { parsePaymentDetails } from './payment.validators.js';
 import { ApiError } from '../../shared/ApiError.js';
 import { env } from '../../config/env.js';
 import { logger } from '../../utils/logger.js';
@@ -20,7 +21,7 @@ const WOMPI_STATUS_MAP = {
  * El monto SIEMPRE se calcula desde orden.total en base de datos,
  * nunca desde algo que mande el cliente.
  */
-export async function initiatePayment({ orderId, usuarioId }) {
+export async function initiatePayment({ orderId, usuarioId, paymentDetails }) {
   const orden = await findOrderById(orderId);
 
   if (!orden || orden.usuario_id !== usuarioId) {
@@ -34,11 +35,20 @@ export async function initiatePayment({ orderId, usuarioId }) {
   const usuario = await findUsuarioById(usuarioId);
   const amountInCents = Math.round(Number(orden.total) * 100);
 
+  // Cada método exige campos distintos (PSE: banco/documento, Nequi:
+  // celular, tarjeta: token de Wompi.js) — se validan aquí según el
+  // método que quedó fijado en la orden, no según lo que mande el body.
+  const detallesValidados = parsePaymentDetails(orden.metodo_pago, paymentDetails);
+  const paymentMethod = buildPaymentMethod(orden.metodo_pago, {
+    ...detallesValidados,
+    reference: orden.numero_orden,
+  });
+
   const transaction = await createTransaction({
     reference: orden.numero_orden,
     amountInCents,
     customerEmail: usuario.email,
-    paymentMethodType: orden.metodo_pago.toUpperCase(),
+    paymentMethod,
     redirectUrl: `${env.FRONTEND_URL}/checkout/resultado?orden=${orden.numero_orden}`,
   });
 

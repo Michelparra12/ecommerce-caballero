@@ -30,11 +30,46 @@ function buildIntegritySignature({ reference, amountInCents, currency }) {
 }
 
 /**
+ * Traduce nuestros campos (camelCase, validados por payment.validators.js)
+ * al objeto payment_method exacto que exige cada método de pago de Wompi.
+ * Cada método tiene forma distinta — no existe un payment_method genérico
+ * de solo { type } que sirva para los tres.
+ * Ver: https://docs.wompi.co/docs/en/metodos-de-pago
+ *
+ * Tarjeta: el `cardToken` viene de tokenizar la tarjeta con Wompi.js EN
+ * EL FRONTEND (widget de Wompi). El número de tarjeta real nunca debe
+ * llegar a este backend — solo el token ya generado.
+ */
+export function buildPaymentMethod(metodoPago, details) {
+  switch (metodoPago) {
+    case 'pse':
+      return {
+        type: 'PSE',
+        user_type: details.userType === 'juridica' ? 1 : 0,
+        user_legal_id_type: details.userLegalIdType,
+        user_legal_id: details.userLegalId,
+        financial_institution_code: details.financialInstitutionCode,
+        payment_description: `Pago pedido ${details.reference}`.slice(0, 100),
+      };
+
+    case 'nequi':
+      return { type: 'NEQUI', phone_number: details.phoneNumber };
+
+    case 'credit_card':
+    case 'debit_card':
+      return { type: 'CARD', installments: details.installments, token: details.cardToken };
+
+    default:
+      throw new ApiError(400, `Método de pago no soportado por Wompi: ${metodoPago}`);
+  }
+}
+
+/**
  * Crea una transacción en Wompi para una orden ya existente en nuestra BD.
  * amountInCents debe calcularse a partir de orden.total (en centavos),
  * nunca confiar en un monto enviado por el cliente.
  */
-export async function createTransaction({ reference, amountInCents, currency = 'COP', customerEmail, paymentMethodType, redirectUrl }) {
+export async function createTransaction({ reference, amountInCents, currency = 'COP', customerEmail, paymentMethod, redirectUrl }) {
   assertConfigured();
 
   const signature = buildIntegritySignature({ reference, amountInCents, currency });
@@ -51,7 +86,7 @@ export async function createTransaction({ reference, amountInCents, currency = '
       customer_email: customerEmail,
       reference,
       signature,
-      payment_method: { type: paymentMethodType },
+      payment_method: paymentMethod,
       redirect_url: redirectUrl,
     }),
   });

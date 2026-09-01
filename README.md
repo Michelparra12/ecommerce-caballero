@@ -97,6 +97,16 @@ Importa `n8n/workflows/notificaciones-whatsapp.json` desde la UI de n8n.
 | POST | `/api/pagos/webhook/wompi` | Webhook de confirmación de pago (firma verificada) |
 | GET | `/feed/productos.xml` | Feed XML para Instagram Shopping / Facebook Shop |
 
+#### Body de `POST /api/pagos/:ordenId/iniciar` según el método de pago de la orden
+
+Wompi exige campos distintos por método — no basta con el tipo:
+
+| Método (`metodo_pago` de la orden) | Body requerido |
+|---|---|
+| `pse` | `{ userType: 'natural'\|'juridica', userLegalIdType: 'CC'\|'CE'\|'NIT', userLegalId, financialInstitutionCode }` |
+| `nequi` | `{ phoneNumber }` (celular colombiano, ej: `3001234567`) |
+| `credit_card` / `debit_card` | `{ cardToken, installments? }` — `cardToken` se obtiene tokenizando la tarjeta con **Wompi.js en el frontend**; el número de tarjeta **nunca** debe llegar a este backend (PCI compliance) |
+
 ### Panel de administración (requieren rol `admin` en la tabla `usuarios`)
 
 | Método | Ruta | Descripción |

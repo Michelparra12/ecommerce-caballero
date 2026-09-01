@@ -3,7 +3,7 @@ import { initiatePayment, handleWompiWebhook } from './payment.service.js';
 export async function initiatePaymentHandler(req, res) {
   const orderId = Number(req.params.ordenId);
 
-  const checkout = await initiatePayment({ orderId, usuarioId: req.user.id });
+  const checkout = await initiatePayment({ orderId, usuarioId: req.user.id, paymentDetails: req.body });
 
   res.status(200).json({ data: checkout });
 }

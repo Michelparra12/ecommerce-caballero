@@ -17,9 +17,60 @@ import assert from 'node:assert/strict';
 // de que corra el resto del archivo (incluidas las asignaciones a
 // process.env de arriba), y wompi.client.js importa config/env.js, que
 // lanza si DATABASE_URL/FIREBASE_* no están seteadas todavía.
-const { createTransaction, verifyWebhookSignature } = await import(
+const { createTransaction, verifyWebhookSignature, buildPaymentMethod } = await import(
   '../src/integrations/payments/wompi.client.js'
 );
+
+// --- buildPaymentMethod: los 3 métodos soportados ---
+
+test('buildPaymentMethod arma el payload de PSE con los campos que exige Wompi', () => {
+  const payload = buildPaymentMethod('pse', {
+    userType: 'natural',
+    userLegalIdType: 'CC',
+    userLegalId: '1020304050',
+    financialInstitutionCode: '1007',
+    reference: 'ORD-2026-000111',
+  });
+
+  assert.deepEqual(payload, {
+    type: 'PSE',
+    user_type: 0,
+    user_legal_id_type: 'CC',
+    user_legal_id: '1020304050',
+    financial_institution_code: '1007',
+    payment_description: 'Pago pedido ORD-2026-000111',
+  });
+});
+
+test('buildPaymentMethod mapea persona jurídica a user_type 1 en PSE', () => {
+  const payload = buildPaymentMethod('pse', {
+    userType: 'juridica',
+    userLegalIdType: 'NIT',
+    userLegalId: '900123456',
+    financialInstitutionCode: '1051',
+    reference: 'ORD-2026-000112',
+  });
+
+  assert.equal(payload.user_type, 1);
+});
+
+test('buildPaymentMethod arma el payload de Nequi con el celular', () => {
+  const payload = buildPaymentMethod('nequi', { phoneNumber: '3001234567', reference: 'ORD-2026-000113' });
+
+  assert.deepEqual(payload, { type: 'NEQUI', phone_number: '3001234567' });
+});
+
+test('buildPaymentMethod arma el payload de tarjeta a partir de un token (nunca datos crudos de tarjeta)', () => {
+  const payload = buildPaymentMethod('credit_card', {
+    cardToken: 'tok_test_abc123',
+    installments: 3,
+    reference: 'ORD-2026-000114',
+  });
+
+  assert.deepEqual(payload, { type: 'CARD', installments: 3, token: 'tok_test_abc123' });
+  // Ninguna clave del payload debe parecer un número de tarjeta.
+  assert.equal('card_number' in payload, false);
+});
 
 // --- verifyWebhookSignature ---
 // El checksum esperado se calcula aquí de forma independiente (mismo
@@ -150,7 +201,7 @@ test('createTransaction firma con SHA256(reference+amount+currency+secreto) y us
     reference: 'ORD-2026-000456',
     amountInCents: 25000000,
     customerEmail: 'cliente@test.com',
-    paymentMethodType: 'NEQUI',
+    paymentMethod: { type: 'NEQUI', phone_number: '3001234567' },
     redirectUrl: 'https://tienda.test/checkout/resultado',
   });
 
@@ -162,6 +213,7 @@ test('createTransaction firma con SHA256(reference+amount+currency+secreto) y us
   assert.equal(body.amount_in_cents, 25000000);
   assert.equal(body.currency, 'COP');
   assert.equal(body.payment_method.type, 'NEQUI');
+  assert.equal(body.payment_method.phone_number, '3001234567');
 
   const firmaEsperada = crypto
     .createHash('sha256')
@@ -184,7 +236,7 @@ test('createTransaction lanza ApiError 502 si Wompi rechaza la solicitud', async
         reference: 'ORD-2026-000789',
         amountInCents: 1000,
         customerEmail: 'cliente@test.com',
-        paymentMethodType: 'NEQUI',
+        paymentMethod: { type: 'NEQUI', phone_number: '3001234567' },
         redirectUrl: 'https://tienda.test/checkout/resultado',
       }),
     (err) => {
