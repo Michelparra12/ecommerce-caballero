@@ -53,9 +53,14 @@ export async function initiatePayment({ orderId, usuarioId, paymentDetails }) {
   });
 
   return {
-    checkoutUrl: transaction.redirect_url,
+    numeroOrden: orden.numero_orden,
     wompiTransactionId: transaction.id,
-    publicKey: env.WOMPI_PUBLIC_KEY,
+    estado: transaction.status,
+    // Solo PSE la trae: es la URL a la que hay que enviar al cliente
+    // para que autorice el pago en el sitio de su banco. Nequi y
+    // tarjeta no redirigen — el resultado llega async por el webhook,
+    // por eso el frontend debe pasar a resultado.html en polling.
+    asyncPaymentUrl: transaction.payment_method?.extra?.async_payment_url ?? null,
   };
 }
 

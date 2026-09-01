@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
+import { Header } from '@/components/Header';
+import { Providers } from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -15,9 +17,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body>
-        {children}
-        {/* Presente en todas las páginas vía layout raíz, como pide el requerimiento omnicanal */}
-        <WhatsAppButton phoneNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '573001234567'} />
+        <Providers>
+          <Header />
+          {children}
+          {/* Presente en todas las páginas vía layout raíz, como pide el requerimiento omnicanal */}
+          <WhatsAppButton phoneNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '573001234567'} />
+        </Providers>
       </body>
     </html>
   );

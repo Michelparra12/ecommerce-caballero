@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createOrderHandler,
   getOrderHandler,
+  getOrderByNumeroHandler,
   listMyOrdersHandler,
   listAllOrdersHandler,
   getOrderAnyHandler,
@@ -26,4 +27,7 @@ orderRouter.patch('/admin/:id/envio', requireAdmin, asyncHandler(updateFulfillme
 // --- Rutas del cliente sobre sus propias órdenes ---
 orderRouter.post('/', asyncHandler(createOrderHandler));
 orderRouter.get('/', asyncHandler(listMyOrdersHandler));
+// Registrada ANTES de '/:id' por la misma razón que '/admin' arriba:
+// 'GET /numero/ORD-...' no debe ser capturado por '/:id'.
+orderRouter.get('/numero/:numeroOrden', asyncHandler(getOrderByNumeroHandler));
 orderRouter.get('/:id', asyncHandler(getOrderHandler));

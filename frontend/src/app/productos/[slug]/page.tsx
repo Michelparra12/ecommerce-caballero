@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { fetchProductBySlug } from '@/lib/api';
+import { AddToCartButton } from '@/components/AddToCartButton';
 
 interface PageProps {
   params: { slug: string };
@@ -110,6 +111,15 @@ export default async function ProductoDetallePage({ params }: PageProps) {
           <p>
             {producto.stock > 0 ? `Disponible (${producto.stock} en stock)` : 'Agotado'}
           </p>
+          {producto.stock > 0 && (
+            <AddToCartButton
+              productoId={producto.id}
+              nombre={producto.nombre}
+              slug={producto.slug}
+              precio={Number(producto.precio)}
+              imagenUrl={producto.imagen_principal_url}
+            />
+          )}
         </div>
       </div>
     </main>

@@ -2,6 +2,7 @@ import { createOrderSchema, listAllOrdersQuerySchema, updateFulfillmentSchema } 
 import {
   createOrder,
   getOrderForUsuario,
+  getOrderByNumeroForUsuario,
   listMyOrders,
   listAllOrders,
   getOrderAny,
@@ -31,6 +32,11 @@ export async function getOrderHandler(req, res) {
 export async function listMyOrdersHandler(req, res) {
   const ordenes = await listMyOrders(req.user.id);
   res.status(200).json({ data: ordenes });
+}
+
+export async function getOrderByNumeroHandler(req, res) {
+  const orden = await getOrderByNumeroForUsuario(req.params.numeroOrden, req.user.id);
+  res.status(200).json({ data: orden });
 }
 
 // --- Handlers de administración ---

@@ -38,3 +38,31 @@ export interface ProductoFiltros {
   precioMax?: number;
   q?: string;
 }
+
+export interface Direccion {
+  id: number;
+  etiqueta: string;
+  ciudad: string;
+  departamento: string;
+  direccion_linea: string;
+  codigo_postal: string | null;
+  es_predeterminada: boolean;
+}
+
+export type MetodoPago = 'pse' | 'nequi' | 'credit_card' | 'debit_card';
+
+export interface Orden {
+  id: number;
+  numero_orden: string;
+  estado: string;
+  subtotal: string;
+  costo_envio: string;
+  total: string;
+}
+
+export interface IniciarPagoResponse {
+  numeroOrden: string;
+  wompiTransactionId: string;
+  estado: string;
+  asyncPaymentUrl: string | null;
+}

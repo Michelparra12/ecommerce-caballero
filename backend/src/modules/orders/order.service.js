@@ -1,6 +1,7 @@
 import {
   createOrderTransaction,
   findOrderById,
+  findOrderIdByNumero,
   findOrdersByUsuario,
   findAllOrders,
   updateOrderFulfillment,
@@ -32,6 +33,21 @@ export async function getOrderForUsuario(orderId, usuarioId) {
 
 export async function listMyOrders(usuarioId) {
   return findOrdersByUsuario(usuarioId);
+}
+
+/**
+ * El frontend, tras iniciar un pago, solo conoce numero_orden (no el id
+ * numérico interno) — lo usa la página de resultado del checkout para
+ * hacer polling del estado sin exponer ids secuenciales en la URL.
+ */
+export async function getOrderByNumeroForUsuario(numeroOrden, usuarioId) {
+  const orderId = await findOrderIdByNumero(numeroOrden);
+
+  if (!orderId) {
+    throw ApiError.notFound(`Orden ${numeroOrden} no encontrada`);
+  }
+
+  return getOrderForUsuario(orderId, usuarioId);
 }
 
 // --- Operaciones de administración ---

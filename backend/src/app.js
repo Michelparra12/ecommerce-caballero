@@ -11,6 +11,7 @@ import { categoryRouter } from './modules/categories/category.routes.js';
 import { orderRouter } from './modules/orders/order.routes.js';
 import { userRouter } from './modules/users/user.routes.js';
 import { paymentRouter } from './modules/payments/payment.routes.js';
+import { addressRouter } from './modules/addresses/address.routes.js';
 import { feedRouter } from './modules/feed/feed.routes.js';
 
 export function createApp() {
@@ -39,6 +40,7 @@ export function createApp() {
   app.use('/api/ordenes', orderRouter);
   app.use('/api/usuarios', userRouter);
   app.use('/api/pagos', paymentRouter);
+  app.use('/api/direcciones', addressRouter);
   app.use('/feed', feedRouter);
 
   app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));

@@ -18,10 +18,16 @@ ecommerce-caballero/
 **Flujo de una compra:**
 
 ```
-Cliente (frontend Next.js)
+Cliente en /productos → "Agregar al carrito" (localStorage, sin backend)
+  → /carrito → /checkout (requiere login con Firebase Auth)
+  → [si no existe] POST /api/direcciones (guarda la dirección de envío)
   → POST /api/ordenes (backend, valida stock, congela precios, crea orden)
-  → POST /api/pagos/:ordenId/iniciar (crea transacción en Wompi)
-  → Cliente paga en Wompi
+  → Tarjeta: el navegador tokeniza la tarjeta directo contra Wompi
+    (número de tarjeta JAMÁS toca nuestro backend, solo el token)
+  → POST /api/pagos/:ordenId/iniciar (crea transacción en Wompi con el
+    payment_method correcto: PSE/Nequi/tarjeta)
+  → PSE: redirige al cliente al banco (asyncPaymentUrl)
+    Nequi/tarjeta: el cliente pasa a /checkout/resultado (hace polling)
   → Wompi llama POST /api/pagos/webhook/wompi (firma verificada)
   → backend marca la orden como 'paid' y dispara el webhook de n8n
   → n8n envía la confirmación por WhatsApp (Meta Cloud API)
@@ -92,6 +98,8 @@ Importa `n8n/workflows/notificaciones-whatsapp.json` desde la UI de n8n.
 | GET | `/api/productos` | Catálogo con paginación y filtros (`page`, `limit`, `categoriaId`, `marca`, `precioMin`, `precioMax`, `q`) |
 | GET | `/api/productos/:slug` | Detalle de producto |
 | GET | `/api/categorias` | Árbol de categorías |
+| GET | `/api/direcciones` | Listar mis direcciones (requiere Auth) |
+| POST | `/api/direcciones` | Crear dirección de envío (requiere Auth) |
 | POST | `/api/ordenes` | Crear orden (requiere Firebase Auth) |
 | POST | `/api/pagos/:ordenId/iniciar` | Iniciar cobro en Wompi (requiere Auth) |
 | POST | `/api/pagos/webhook/wompi` | Webhook de confirmación de pago (firma verificada) |
@@ -147,4 +155,7 @@ un VPS de Hostinger con Docker Compose, HTTPS (Certbot) y configuración de n8n.
 
 - Frontend del panel de administración (hoy solo existe la API; el admin usa Postman/curl o un cliente propio).
 - Tests de integración end-to-end del checkout completo (orden -> pago -> webhook) con Playwright o Supertest.
+- Lista de bancos PSE está hardcodeada en `frontend/src/app/checkout/page.tsx` (`BANCOS_PSE`); en producción
+  conviene pedirla en vivo a `GET /pse/financial_institutions` de Wompi.
+- Botón "Reintentar pago" en `/checkout/resultado` cuando la orden queda en `cancelled` (hoy solo se informa).
 - App móvil en Kotlin Multiplatform consumiendo la misma API REST.
