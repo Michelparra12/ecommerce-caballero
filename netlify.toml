@@ -1,0 +1,11 @@
+# Despliega SOLO el frontend (Next.js) en Netlify. El backend
+# (Express + PostgreSQL), n8n y nginx quedan fuera de este despliegue:
+# Netlify no corre servidores persistentes ni bases de datos — ver
+# DEPLOYMENT.md para esos componentes (Hostinger / cualquier VPS/Railway/Render).
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

@@ -131,3 +131,25 @@ git pull
 docker compose up -d --build
 docker compose exec backend node src/db/migrate.js
 ```
+
+## Alternativa: frontend en Netlify
+
+Netlify solo sirve para el **frontend** (Next.js) — no corre el backend
+Express, PostgreSQL ni n8n, así que esos tres siguen necesitando un VPS (los
+pasos de arriba) o un host tipo Railway/Render.
+
+1. En [app.netlify.com](https://app.netlify.com) → **Add new site → Import an
+   existing project** → conecta el repo `ecommerce-caballero` de GitHub.
+2. Netlify detecta `netlify.toml` en la raíz del repo automáticamente
+   (`base = "frontend"`, usa el plugin oficial `@netlify/plugin-nextjs` para
+   SSR/ISR — no hace falta tocar nada de esa configuración).
+3. En **Site settings → Environment variables**, agrega las mismas variables
+   de `frontend/.env.example`, apuntando `NEXT_PUBLIC_API_URL` al backend ya
+   desplegado (Hostinger/Railway/Render) — el backend tiene que estar arriba
+   *antes* de este paso, o el build fallará al intentar generar las páginas
+   estáticas del catálogo (hacen `fetch` al backend durante el build).
+4. Deploy. Netlify te da una URL `*.netlify.app`; puedes apuntar tu dominio
+   propio desde **Domain settings**.
+5. Actualiza `FRONTEND_URL` en `backend/.env` (o las variables del VPS) al
+   dominio final de Netlify — Wompi usa esa URL para el `redirect_url` tras
+   el pago, y CORS del backend solo permite ese origen.
