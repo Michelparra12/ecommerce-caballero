@@ -56,7 +56,11 @@ export async function createOrderTransaction({ usuarioId, direccionId, metodoPag
         subtotalLinea,
       });
 
-      await client.query('UPDATE productos SET stock = stock - $1 WHERE id = $2', [
+      // Cast explícito de los parámetros: sin él, algunos drivers/motores
+      // pueden inferir mal el tipo del placeholder en una expresión
+      // aritmética del SET (visto con pg-mem en tests; inofensivo y más
+      // seguro también contra Postgres real).
+      await client.query('UPDATE productos SET stock = stock - $1::int WHERE id = $2::bigint', [
         item.cantidad,
         producto.id,
       ]);

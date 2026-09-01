@@ -56,6 +56,18 @@ npm run migrate
 npm run dev             # http://localhost:4000
 ```
 
+**Tests** (no requieren Postgres real — usan [pg-mem](https://github.com/oguimbal/pg-mem) para probar
+transacciones/constraints reales en memoria, y mockean `fetch` para Wompi):
+
+```bash
+npm test
+```
+
+Cubren la lógica más sensible: la transacción de stock al crear una orden
+(`test/order.repository.test.mjs`) y la firma de integridad / verificación
+de checksum del webhook de Wompi (`test/wompi.client.test.mjs`). Requiere
+Node.js 22+ (usa `--experimental-test-module-mocks`).
+
 ### 3. Frontend
 
 ```bash
@@ -123,7 +135,6 @@ un VPS de Hostinger con Docker Compose, HTTPS (Certbot) y configuración de n8n.
 
 ## Próximos pasos sugeridos
 
-- Panel de administración (gestión de productos/stock/órdenes) protegido con `requireRole('admin')`.
-- Webhook adicional que dispare el evento `guia.enviada` hacia n8n cuando el equipo de logística despache un pedido.
-- Tests automatizados (Vitest/Jest) para `order.repository.js` (transacción de stock) y `wompi.client.js` (firma).
+- Frontend del panel de administración (hoy solo existe la API; el admin usa Postman/curl o un cliente propio).
+- Tests de integración end-to-end del checkout completo (orden -> pago -> webhook) con Playwright o Supertest.
 - App móvil en Kotlin Multiplatform consumiendo la misma API REST.
